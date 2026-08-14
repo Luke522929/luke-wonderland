@@ -3546,7 +3546,9 @@ window.DASH_DATA = {
   const _set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
   _set('rpl1', L1); _set('rpl2', L2); _set('rcl1', L1); _set('rcl2', L2);
   _set('btnY26', '仅 ' + L2 + ' 已有月份');
-  let selected = new Set(ALL);
+  // 初始筛选：仅 26 年已有月份（1–LATEST），与「仅 2026 已有月份」按钮一致
+  let selected = new Set();
+  for(let m=1;m<=LATEST;m++) selected.add(m);
 
   const cOverview = echarts.init(document.getElementById('chartOverview'));
   const cProdBar  = echarts.init(document.getElementById('chartProdBar'));
@@ -3601,7 +3603,7 @@ window.DASH_DATA = {
   const mb = document.getElementById('monthBtns');
   ALL.forEach(m=>{
     const b=document.createElement('span');
-    b.className='mbtn on';
+    b.className='mbtn' + (m<=LATEST ? ' on' : '');
     b.textContent=m+'月';
     b.dataset.m=m;
     b.onclick=()=>{ if(selected.has(m)){selected.delete(m);b.classList.remove('on');}
@@ -3729,7 +3731,8 @@ window.DASH_DATA = {
       });
     });
     const legendSel={};
-    items.forEach(p=>{ legendSel[p.name+' ·25']=false; });
+    // 除数据总览外，其余走势曲线初始仅显示 26 年（25 年虚线默认隐藏，图例可手动开启）
+    items.forEach(p=>{ legendSel[p.name+' ·'+Y1]=false; });
     chart.setOption({
       tooltip:{trigger:'axis', valueFormatter:v=> v==0?'0':fmtFull(v)},
       legend:{type:'scroll', data:legendData, selected:legendSel, top:0, textStyle:{fontSize:11}},
