@@ -65,6 +65,18 @@
   .ringtitle{font-size:12px;font-weight:600;text-align:center;color:var(--ink);
     margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ringchart{width:100%;height:188px;}
+
+  /* 各客户出货明细 */
+  .sub-h{font-size:15px;margin:28px 0 12px;font-weight:600;color:var(--accent);
+    border-left:4px solid var(--blue);padding-left:10px;}
+  .cust-detail{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:18px;
+    background:#fbfcfe;box-shadow:0 1px 3px rgba(20,40,80,.04);}
+  .cust-detail .cd-h{font-size:15px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .cust-detail .cd-h .cd-dot{width:9px;height:9px;border-radius:50%;background:var(--blue);display:inline-block;}
+  .cust-detail .cd-h .cd-tot{font-size:12px;color:var(--muted);font-weight:500;}
+  .cd-ringcard{margin-top:14px;}
+  .cd-ring-wrap{display:flex;justify-content:center;}
+  .cd-ring{width:340px;height:214px;}
 </style>
 </head>
 <body>
@@ -122,7 +134,7 @@
   <!-- 分客户 -->
   <div class="section">
     <h2><span class="bar"></span>分客户数据</h2>
-    <p class="hint">柱状图为所选月份 26 年各客户出货额合计（柱顶标注金额与同比，同比基于 25/26 年同期月份）；曲线为各客户分月出货走势（26 年实线，25 年虚线默认隐藏，可在图例开启）。<br/>下方每个同心圆环代表一个客户：两年都有数据时内圈 = 25 年该客户各产品销售占比、外圈 = 26 年同口径占比；若某年无数据，则以整环展示有数据的年份占比，环心标注年份。</p>
+    <p class="hint">柱状图为所选月份 26 年各客户出货额合计（柱顶标注金额与同比，同比基于 25/26 年同期月份）；曲线为各客户分月出货走势（26 年实线，25 年虚线默认隐藏，可在图例开启）。<br/>下方「各客户出货明细」逐客户展开：分别为该客户的<b>各产品出货额</b>（柱状图，柱顶标注金额与同比）、<b>各产品分月出货走势</b>（曲线）、以及该客户的<b>产品占比同心圆</b>（内圈 <span id="rcl1"></span> · 外圈 <span id="rcl2"></span>，切片 = 产品），逻辑与「分产品数据」模块一致、仅限定为该单一客户。</p>
     <div class="grid2">
       <div class="card">
         <div class="ct">各客户出货额（26 年 · 所选月份合计）</div>
@@ -133,11 +145,8 @@
         <div id="chartCustLine" class="chart"></div>
       </div>
     </div>
-    <div class="card" style="margin-top:18px;">
-      <div class="ct">各客户产品占比 · 每环一个客户（内圈 <span id="rcl1"></span> · 外圈 <span id="rcl2"></span>，所选月份）</div>
-      <div id="custLegend" class="ringlegend"></div>
-      <div id="custRingGrid" class="ringgrid"></div>
-    </div>
+    <h3 class="sub-h">各客户出货明细</h3>
+    <div id="custDetail"></div>
   </div>
 
   <footer id="footText"></footer>
@@ -3822,15 +3831,48 @@ window.DASH_DATA = {
     entry.chart.setOption(opt, true);
   }
 
-  // 初始化同心圆环
+  // 初始化同心圆环（仅保留分产品模块的产品占比环；分客户的产品占比环移至各客户出货明细内）
   const prodRings = buildRingSection('prodRingGrid', 'prodLegend', D.products, D.customers, 'byCustomer');
-  const custRings = buildRingSection('custRingGrid', 'custLegend', D.customers, D.products, 'byProduct');
+
+  // 从单个客户的 byProduct 派生「各产品」条目（供该客户的柱状图 / 走势曲线使用）
+  function custProducts(c){
+    const bp = c.byProduct || {};
+    return Object.keys(bp).map(p => ({name:p, y2025:bp[p].y2025, y2026:bp[p].y2026}));
+  }
+
+  // 构建「各客户出货明细」：每个客户一块，含 各产品出货额柱状图 + 各产品分月走势 + 该客户产品占比同心圆
+  const custDetailBars = [], custDetailLines = [], custDetailRings = [];
+  function buildCustDetail(){
+    const host = document.getElementById('custDetail');
+    host.innerHTML = '';
+    D.customers.forEach((c, idx)=>{
+      const wrap = document.createElement('div'); wrap.className = 'cust-detail';
+      wrap.innerHTML =
+        '<div class="cd-h"><span class="cd-dot"></span>'+c.name
+          +'<span class="cd-tot">26 年出货额合计 '+fmt(c.tot26)+'</span></div>'
+        +'<div class="grid2">'
+          +'<div class="card"><div class="ct">各产品出货额（26 年 · 所选月份合计）</div>'
+            +'<div id="cdBar'+idx+'" class="chart"></div></div>'
+          +'<div class="card"><div class="ct">各产品分月出货走势</div>'
+            +'<div id="cdLine'+idx+'" class="chart"></div></div>'
+        +'</div>'
+        +'<div class="card cd-ringcard"><div class="ct">产品占比（内圈 '+L1+' · 外圈 '+L2+'，所选月份 · 切片 = 产品）</div>'
+          +'<div class="cd-ring-wrap"><div id="cdRing'+idx+'" class="cd-ring"></div></div></div>';
+      host.appendChild(wrap);
+      custDetailBars.push({chart:echarts.init(document.getElementById('cdBar'+idx)), item:c});
+      custDetailLines.push({chart:echarts.init(document.getElementById('cdLine'+idx)), item:c});
+      custDetailRings.push({chart:echarts.init(document.getElementById('cdRing'+idx)), item:c});
+    });
+  }
+  buildCustDetail();
 
   function renderAll(){
     const charts=[cOverview,cProdBar,cProdLine,cCustBar,cCustLine];
-    const allRings = prodRings.concat(custRings);
+    const detailCharts = custDetailBars.map(e=>e.chart).concat(custDetailLines.map(e=>e.chart));
+    const allRings = prodRings.concat(custDetailRings);
     if(selected.size===0){
       charts.forEach(c=>c.clear());
+      detailCharts.forEach(c=>c.clear());
       allRings.forEach(r=>r.chart.clear());
       document.getElementById('kpiBox').innerHTML='<div class="kpi"><div class="k-label">提示</div><div class="k-val" style="font-size:16px;">请至少选择一个月份</div></div>';
       return;
@@ -3840,13 +3882,17 @@ window.DASH_DATA = {
     renderLine(cProdLine, D.products);
     renderBar(cCustBar, D.customers);
     renderLine(cCustLine, D.customers);
+    // 各客户出货明细：柱状图 / 走势曲线 / 产品占比环
+    custDetailBars.forEach(e=>renderBar(e.chart, custProducts(e.item)));
+    custDetailLines.forEach(e=>renderLine(e.chart, custProducts(e.item)));
+    custDetailRings.forEach(e=>renderRingSmall(e, D.products, 'byProduct'));
     prodRings.forEach(e=>renderRingSmall(e, D.customers, 'byCustomer'));
-    custRings.forEach(e=>renderRingSmall(e, D.products, 'byProduct'));
   }
 
   window.addEventListener('resize', ()=>{
     [cOverview,cProdBar,cProdLine,cCustBar,cCustLine].forEach(c=>c.resize());
-    prodRings.concat(custRings).forEach(e=>e.chart.resize());
+    custDetailBars.concat(custDetailLines).forEach(e=>e.chart.resize());
+    prodRings.concat(custDetailRings).forEach(e=>e.chart.resize());
   });
 
   renderAll();
