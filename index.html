@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>经销商订货数据看板</title>
+<title>跨境分销出货数据看板</title>
 <style>
   :root{
     --bg:#f5f7fa; --card:#ffffff; --ink:#1f2d3d; --muted:#7b8794;
@@ -19,8 +19,8 @@
   header.top .sub{color:var(--muted);font-size:13px;}
   .scope{color:var(--muted);font-size:12px;margin-bottom:18px;}
 
-  .filter{background:var(--card);border:1px solid var(--line);border-radius:12px;
-    padding:14px 16px;margin-bottom:22px;box-shadow:0 1px 3px rgba(20,40,80,.04);}
+  .filter{position:sticky;top:0;z-index:20;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;margin-bottom:22px;box-shadow:0 2px 10px rgba(20,40,80,.10);}
   .filter .frow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .filter .flabel{font-size:13px;color:var(--muted);font-weight:600;min-width:64px;}
   .mbtn{border:1px solid var(--line);background:#fff;color:var(--ink);
@@ -70,10 +70,8 @@
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>经销商订货数据看板</h1>
-    <div class="sub" id="subTitle">出货额对比分析</div>
+    <h1>跨境分销出货数据看板</h1>
   </header>
-  <div class="scope" id="scopeText"></div>
 
   <!-- 月份筛选 -->
   <div class="filter">
@@ -3535,8 +3533,7 @@ window.DASH_DATA = {
   const Y1 = D.meta.year_prev, Y2 = D.meta.year_curr;
   const L1 = Y1 + ' 年', L2 = Y2 + ' 年';
   const ALL = D.overview.months_all;
-  document.title = '经销商订货数据看板 · ' + Y1 + ' vs ' + Y2;
-  document.getElementById('subTitle').textContent = Y1 + ' 年 vs ' + Y2 + ' 年 · 出货额对比分析';
+  document.title = '跨境分销出货数据看板 · ' + Y1 + ' vs ' + Y2;
   const _set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
   _set('rpl1', L1); _set('rpl2', L2); _set('rcl1', L1); _set('rcl2', L2);
   _set('btnY26', '仅 ' + L2 + ' 已有月份');
@@ -3584,7 +3581,6 @@ window.DASH_DATA = {
   function colorOf(name, ref){ const i=ref.findIndex(r=>r.name===name); return colorByIdx(i<0?0:i); }
 
   // ---- scope / footer text ----
-  document.getElementById('scopeText').textContent = '数据范围：' + D.meta.scope + '　|　产品 ' + D.meta.products_count + ' 个，客户 ' + D.meta.customers_count + ' 个';
   document.getElementById('latestTxt').textContent = LATEST + ' 月';
   document.getElementById('footText').innerHTML =
     '说明：出货额取自「金额」列（M 列），月份取自「订单日期」列（A 列），客户取自「客户」列（E 列），产品取自「产品」列（G 列）。<br/>'
